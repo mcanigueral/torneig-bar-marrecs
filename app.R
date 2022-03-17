@@ -164,6 +164,14 @@ shinyApp(
                    "Gràcies per jugar!"
                  ))
                )
+             ),
+             
+             div(
+               style = "padding: 100px; text-align: center;",
+               img(
+                 src = "https://upload.wikimedia.org/wikipedia/commons/7/75/Logotip_dels_Marrecs_de_Salt.png", 
+                 height = 200
+               )
              )
              
       ),
@@ -317,22 +325,21 @@ shinyApp(
     
     output$plot_dards <- renderHighchart({
       classification$dards %>% 
-        hchart(type = "column", hcaes(x = jugador, y = punts)) %>% 
+        hchart(type = "column", hcaes(x = jugador, y = punts), name = "Punts") %>% 
         hc_xAxis(title = list(text = "")) %>% 
-        hc_yAxis(title = list(text = "Punts")) %>% 
-        hc_series("pun")
+        hc_yAxis(title = list(text = "Punts"))
     })
     
     output$plot_futboli <- renderHighchart({
       classification$futboli %>% 
-        hchart(type = "column", hcaes(x = jugador, y = punts)) %>% 
+        hchart(type = "column", hcaes(x = jugador, y = punts), name = "Punts") %>% 
         hc_xAxis(title = list(text = "")) %>% 
         hc_yAxis(title = list(text = "Punts"))
     })
     
     output$plot_butifarra <- renderHighchart({
       classification$butifarra %>% 
-        hchart(type = "column", hcaes(x = jugador, y = punts)) %>% 
+        hchart(type = "column", hcaes(x = jugador, y = punts), name = "Punts") %>% 
         hc_xAxis(title = list(text = "")) %>% 
         hc_yAxis(title = list(text = "Punts"))
     })
