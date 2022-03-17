@@ -6,105 +6,240 @@ library(purrr)
 library(googlesheets4)
 library(highcharter)
 
-gs4_deauth()
+config <- config::get(file = "config.yml")
 
-# which fields get saved 
-fieldsAll <- c("GAME", "WINNER", "LOSER")
+# Google authentication ---------------------------------------------------
 
-#Sheet link
-sheet_url <- "https://docs.google.com/spreadsheets/d/1vh1Fjc7JRIGOsZ7osZD2BJ27wdxb5eALq1-2XhSUuUY/edit?usp=sharing"
-last_results <- read_sheet(sheet_url)
+options(
+  gargle_oauth_cache = config$auth$cache,
+  gargle_oauth_email = config$auth$email
+)
+# googlesheets4::gs4_auth()
 
-# which fields are mandatory
-fieldsMandatory <- fieldsAll
 
-# CSS to use in the app
-appCSS <-
-  ".mandatory_star { color: red; }
-   .shiny-input-container { margin-top: 25px; }
-   #submit_msg { margin-left: 15px; }
-   #error { color: red; }
-   body { background: #fcfcfc; }
-   #header { background: #fff; border-bottom: 1px solid #ddd; margin: -20px -15px 0; padding: 15px 15px 10px; }
-  "
+# Read Google sheet -------------------------------------------------------
+
+sheet_url <- config$sheet_url
+
+
+# Functions ---------------------------------------------------------------
+
+get_classification <- function(historic, game) {
+  # if (game == "dards") {
+  #   historic_game <- historic
+  # } else {
+  #   historic_sep <- historic %>% 
+  #     tidyr::separate(jugador, c("jugador1", "jugador2"), sep =  "-") %>% 
+  #     group_by(jugador1, jugador2) %>% 
+  #     summarise(punts = sum(punts))
+  #   for (i in seq(1, nrow(historic_sep))) {
+  #     parella_reves_idx <- which((historic_sep$jugador1[i] == historic_sep$jugador2) & 
+  #                                  (historic_sep$jugador1 == historic_sep$jugador2[i]))
+  #     if (length(parella_reves_idx) > 0) {
+  #       print("parella girada")
+  #       parella_reves <- historic_sep[parella_reves_idx, ]
+  #       parella_reves2 <- parella_reves
+  #       names(parella_reves2) <- c("jugador2", "jugador1", "punts")
+  #       historic_sep2 <- historic_sep[- parella_reves_idx, ]
+  #       historic_sep <- bind_rows(historic_sep2, parella_reves2)
+  #     }
+  #   }
+  #   
+  #   historic_game <- historic_sep %>% 
+  #     mutate(jugador = paste0(jugador1, "-", jugador2))
+  # }
+  
+  return(
+    historic %>% 
+      group_by(jugador) %>% 
+      summarise(punts = sum(punts)) %>% 
+      arrange(desc(punts))
+  )
+}
+
+get_classification_table <- function(classification, game) {
+  # if (game == "dards") {
+  #   names(classification) <- c("Persona", "Punts")
+  # } else {
+  #   names(classification) <- c("Parella", "Punts")
+  # }
+  names(classification) <- c("Persona", "Punts")
+  classification %>% 
+    mutate(`Posició` = row_number()) %>% 
+    select("Posició", everything()) %>% 
+    head(6)
+}
+
+
+# Shiny app ---------------------------------------------------------------
 
 shinyApp(
   ui = fluidPage(
     shinyjs::useShinyjs(),
     theme = shinytheme("cerulean"),
-    shinyjs::inlineCSS(appCSS),
-    title = "Torneig de bar",
+    shinyjs::inlineCSS(
+      "
+      body { background: #ffebcc; }
+      "
+    ),
+    title = "Triatló de bar",
     div(id = "header",
         titlePanel(tagList(
           img(src = "http://marrecs.cat/wp-content/uploads/2016/01/icona-marrecs-300x300.png", height = 50),
-          span(strong("Torneig de bar"))
-        ))
+          span(strong("Triatló de bar"))
+        )),
+        hr(style="border-color: #66a3ff;")
     ),
     
     fluidRow(
       column(4,
-        div(
-          id = "form",
-    
-          selectInput(
-            "GAME", "Quin joc heu jugat?", c("Futbolí", "Dards", "Butifarra")
-          ),
-          textInput(
-            "WINNER", "Persona o parella guanyadora:"
-          ),
-          textInput(
-            "LOSER", "Persona o parella no-guanyadora:"
-          ),
-          
-          actionButton("submit", "Registra el resultat", class = "btn-primary"),
-          
-          shinyjs::hidden(
-            span(id = "submit_msg", "Submitting..."),
-            div(id = "error",
-                div(br(), tags$b("Error: "), span(id = "error_msg"))
-            )
-          )
-        ),
-        
-        shinyjs::hidden(
-          div(
-            id = "thankyou_msg",
-            br(),
-            h2(strong(
-              "Gràcies per jugar!"
-            )),
-            # wellPanel(
-            #   uiOutput("form_answer")
-            # ),
-            # uiOutput('signup_form'),
-            hr(),
-            actionLink("submit_another", "Entra una altra resposta")
-          )
-        )
-
+             
+             div(
+               id = "form",
+               
+               selectInput(
+                 "GAME", "Quin joc heu jugat?",
+                 setNames(
+                   c("dards", "futboli", "butifarra"),
+                   nm = c("Dards", "Futbolí", "Butifarra")
+                 )
+               ),
+               
+               tags$p("Entra el MALNOM dels participants:"),
+               
+               fluidRow(
+                 column(
+                   6,
+                   textInput(
+                     "WINNER", "Persona guanyadora:"
+                   )
+                 ),
+                 column(
+                   6,
+                   shinyjs::hidden(div(
+                     id = "winner2",
+                     # style = "padding-top: 25px;",
+                     textInput(
+                       "WINNER2", "Persona guanyadora 2:"
+                     )
+                   )
+                 ))
+               ),
+               fluidRow(
+                 column(
+                   6,
+                   textInput(
+                     "LOSER", "Persona no-guanyadora:"
+                   )
+                 ),
+                 column(
+                   6,
+                   shinyjs::hidden(div(
+                     id = "loser2",
+                     # style = "padding-top: 25px;",
+                     textInput(
+                       "LOSER2", "Persona no-guanyadora 2:"
+                     )
+                   )
+                 ))
+               ),
+               
+               shinyjs::disabled(
+                 actionButton("submit", "Registra el resultat", class = "btn-primary")
+               ),
+               
+               shinyjs::hidden(
+                 span(id = "submit_msg", "Submitting..."),
+                 div(id = "error",
+                     div(br(), tags$b("Error: "), span(id = "error_msg"))
+                 )
+               )
+             ),
+             
+             shinyjs::hidden(
+               div(
+                 id = "thankyou_msg",
+                 br(),
+                 h2(strong(
+                   "Gràcies per jugar!"
+                 ))
+               )
+             )
+             
       ),
       column(
         8,
-        highchartOutput('plot')
+        fluidRow(
+          column(
+            4, align = 'center',
+            h2(strong("Dards")),
+            tableOutput('table_dards')
+          ),
+          column(
+            4, align = 'center',
+            h2(strong("Futbolí")),
+            tableOutput('table_futboli')
+          ),
+          column(
+            4, align = 'center',
+            h2(strong("Butifarra")),
+            tableOutput('table_butifarra')
+          )
+        ),
+        fluidRow(
+          column(
+            4, align = 'center',
+            highchartOutput('plot_dards')
+          ),
+          column(
+            4, align = 'center',
+            highchartOutput('plot_futboli')
+          ),
+          column(
+            4, align = 'center',
+            highchartOutput('plot_butifarra')
+          )
+        )
       )
     )
   ),
+  
   server = function(input, output, session) {
     
-    plotSettings <- reactiveValues(
-      df = last_results
+    last_results <- map(
+      set_names(c('dards', 'futboli', 'butifarra')),
+      ~ read_sheet(sheet_url, sheet = .x)
     )
     
-    all_filled <- reactive({
-      all(map_lgl(
-        fieldsMandatory,
-        ~ !is.na(input[[.x]])
-      ))
-    })
+    # Classification ----------------------------------------------------------
+    
+    classification <- reactiveValues(
+      dards = get_classification(last_results$dards, game = "dards"),
+      futboli = get_classification(last_results$futboli, game = "futboli"),
+      butifarra = get_classification(last_results$butifarra, game = "butifarra")
+    )
+    
     
     # Enable the Submit button when all mandatory fields are filled out
     observe({
-      shinyjs::toggleState(id = "submit", condition = all_filled())
+      if (input$GAME == "dards") {
+        shinyjs::hide("winner2")
+        shinyjs::hide("loser2")
+        if (stringr::str_length(input$WINNER) > 0 & stringr::str_length(input$LOSER) > 0) {
+          shinyjs::enable("submit")
+        } else {
+          shinyjs::disable("submit")
+        }
+      } else if (input$GAME %in% c("futboli", "butifarra")) {
+        shinyjs::show("winner2")
+        shinyjs::show("loser2")
+        if (stringr::str_length(input$WINNER) > 0 & stringr::str_length(input$LOSER) > 0 &
+            stringr::str_length(input$WINNER2) > 0 & stringr::str_length(input$LOSER2) > 0) {
+          shinyjs::enable("submit")
+        } else {
+          shinyjs::disable("submit")
+        }
+      }
     })
     
     # When the Submit button is clicked, submit the response
@@ -128,40 +263,78 @@ shinyApp(
         shinyjs::enable("submit")
         shinyjs::hide("submit_msg")
       })
-
-      new_result <- tibble(
-        datetime = c(now(), now()),
-        player = c(input$WINNER, input$LOSER),
-        game = c(input$GAME, input$GAME),
-        points = c(3, 1)
-      )
       
-      plotSettings$df <- bind_rows(
-        last_results,
-        new_result
-      )
-
-      sheet_append(sheet_url, new_result)
+      
+      if (input$GAME == "dards") {
+        new_result <- tibble(
+          datetime = c(now(), now()),
+          jugador = c(input$WINNER, input$LOSER),
+          punts = c(3, 1)
+        )
+      } else {
+        new_result <- tibble(
+          datetime = c(now(), now(), now(), now()),
+          jugador = c(input$WINNER, input$WINNER2, input$LOSER, input$LOSER2),
+          punts = c(3, 3, 1, 1)
+        )
+      }
+      
+      new_result <- new_result %>% 
+        mutate(jugador = stringr::str_to_upper(jugador))
+      
+      message("Adjuntant els resultats al Google Sheets")
+      
+      sheet_append(sheet_url, new_result, sheet = input$GAME)
+      
+      session$reload()
       
     })
     
     
-    output$plot <- renderHighchart({
-      plotSettings$df %>% 
-        group_by(player) %>% 
-        summarise(points = sum(points)) %>% 
-        arrange(desc(points)) %>% 
-        hchart(type = "column", hcaes(x = player, y = points)) %>% 
+    # Tables ------------------------------------------------------------------
+    
+    output$table_dards <- renderTable({
+      classification$dards %>% 
+        mutate(punts = as.integer(punts)) %>% 
+        get_classification_table(game = input$GAME)
+    })    
+    
+    output$table_futboli <- renderTable({
+      classification$futboli %>% 
+        mutate(punts = as.integer(punts)) %>% 
+        get_classification_table(game = input$GAME)
+    })   
+    
+    output$table_butifarra <- renderTable({
+      classification$butifarra %>% 
+        mutate(punts = as.integer(punts)) %>% 
+        get_classification_table(game = input$GAME)
+    })   
+    
+    
+    
+    # Plots -------------------------------------------------------------------
+    
+    output$plot_dards <- renderHighchart({
+      classification$dards %>% 
+        hchart(type = "column", hcaes(x = jugador, y = punts)) %>% 
+        hc_xAxis(title = list(text = "")) %>% 
+        hc_yAxis(title = list(text = "Punts")) %>% 
+        hc_series("pun")
+    })
+    
+    output$plot_futboli <- renderHighchart({
+      classification$futboli %>% 
+        hchart(type = "column", hcaes(x = jugador, y = punts)) %>% 
         hc_xAxis(title = list(text = "")) %>% 
         hc_yAxis(title = list(text = "Punts"))
     })
     
-    
-    # submit another response
-    observeEvent(input$submit_another, {
-      shinyjs::reset("form")
-      shinyjs::show("form")
-      shinyjs::hide("thankyou_msg")
+    output$plot_butifarra <- renderHighchart({
+      classification$butifarra %>% 
+        hchart(type = "column", hcaes(x = jugador, y = punts)) %>% 
+        hc_xAxis(title = list(text = "")) %>% 
+        hc_yAxis(title = list(text = "Punts"))
     })
     
   }
