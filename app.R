@@ -86,7 +86,12 @@ shinyApp(
     div(id = "header",
         titlePanel(tagList(
           img(src = "http://marrecs.cat/wp-content/uploads/2016/01/icona-marrecs-300x300.png", height = 50),
-          span(strong("Triatló de bar"))
+          span(
+            strong("Triatló de bar"),
+            actionButton("bases", "",
+                         icon("info", class="fa fa-info-circle", style="color:#4682B4; font-size: 30px;"),
+                         style="background:transparent; border:transparent;")
+          )
         )),
         hr(style="border-color: #66a3ff;")
     ),
@@ -226,6 +231,15 @@ shinyApp(
       futboli = get_classification(last_results$futboli, game = "futboli"),
       butifarra = get_classification(last_results$butifarra, game = "butifarra")
     )
+    
+    # Information
+    observeEvent(input$bases, {
+      showModal(modalDialog(
+        title = "Bases del Triatló de bar",
+        footer = modalButton("Tanca"),
+        HTML(paste(readLines('bases.html'), collapse = "\n"))
+      ))
+    })
     
     
     # Enable the Submit button when all mandatory fields are filled out
