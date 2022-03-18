@@ -79,7 +79,7 @@ shinyApp(
     theme = shinytheme("cerulean"),
     shinyjs::inlineCSS(
       "
-      body { background: #ffebcc; }
+      body { background: #fff5e6; }
       "
     ),
     title = "Triatló de bar",
@@ -174,8 +174,9 @@ shinyApp(
              div(
                style = "padding: 100px; text-align: center;",
                img(
-                 src = "https://upload.wikimedia.org/wikipedia/commons/7/75/Logotip_dels_Marrecs_de_Salt.png", 
-                 height = 200
+                 src = "logo_triatlo.png",
+                 # src = "https://upload.wikimedia.org/wikipedia/commons/7/75/Logotip_dels_Marrecs_de_Salt.png",
+                 height = 300
                )
              )
              
@@ -237,7 +238,7 @@ shinyApp(
       showModal(modalDialog(
         title = "Bases del Triatló de bar",
         footer = modalButton("Tanca"),
-        HTML(paste(readLines('bases.html'), collapse = "\n"))
+        HTML(paste(readLines('www/bases.html'), collapse = "\n"))
       ))
     })
     
