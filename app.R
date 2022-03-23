@@ -172,7 +172,7 @@ shinyApp(
              ),
              
              div(
-               style = "padding: 100px; text-align: center;",
+               style = "padding-top: 50px; padding-bottom: 50px; text-align: center;",
                img(
                  src = "logo_triatlo.png",
                  # src = "https://upload.wikimedia.org/wikipedia/commons/7/75/Logotip_dels_Marrecs_de_Salt.png",
@@ -187,30 +187,19 @@ shinyApp(
           column(
             4, align = 'center',
             h2(strong("Dards")),
-            tableOutput('table_dards')
-          ),
-          column(
-            4, align = 'center',
-            h2(strong("Futbolí")),
-            tableOutput('table_futboli')
-          ),
-          column(
-            4, align = 'center',
-            h2(strong("Butifarra")),
-            tableOutput('table_butifarra')
-          )
-        ),
-        fluidRow(
-          column(
-            4, align = 'center',
+            tableOutput('table_dards'),
             highchartOutput('plot_dards')
           ),
           column(
             4, align = 'center',
+            h2(strong("Futbolí")),
+            tableOutput('table_futboli'),
             highchartOutput('plot_futboli')
           ),
           column(
             4, align = 'center',
+            h2(strong("Butifarra")),
+            tableOutput('table_butifarra'),
             highchartOutput('plot_butifarra')
           )
         )
