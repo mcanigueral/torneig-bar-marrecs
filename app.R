@@ -97,7 +97,7 @@ shinyApp(
     ),
     
     fluidRow(
-      column(4,
+      column(3,
              
              div(
                id = "form",
@@ -105,8 +105,8 @@ shinyApp(
                selectInput(
                  "GAME", "Quin joc heu jugat?",
                  setNames(
-                   c("dards", "futboli", "butifarra"),
-                   nm = c("Dards", "Futbolí", "Butifarra")
+                   c("dards", "futboli", "butifarra", "catan"),
+                   nm = c("Dards", "Futbolí", "Butifarra", "Catan")
                  )
                ),
                
@@ -182,25 +182,31 @@ shinyApp(
              
       ),
       column(
-        8,
+        9,
         fluidRow(
           column(
-            4, align = 'center',
+            3, align = 'center',
             h2(strong("Dards")),
             tableOutput('table_dards'),
             highchartOutput('plot_dards')
           ),
           column(
-            4, align = 'center',
+            3, align = 'center',
             h2(strong("Futbolí")),
             tableOutput('table_futboli'),
             highchartOutput('plot_futboli')
           ),
           column(
-            4, align = 'center',
+            3, align = 'center',
             h2(strong("Butifarra")),
             tableOutput('table_butifarra'),
             highchartOutput('plot_butifarra')
+          ),
+          column(
+            3, align = 'center',
+            h2(strong("Catan")),
+            tableOutput('table_catan'),
+            highchartOutput('plot_catan')
           )
         )
       )
@@ -210,7 +216,7 @@ shinyApp(
   server = function(input, output, session) {
     
     last_results <- map(
-      set_names(c('dards', 'futboli', 'butifarra')),
+      set_names(c('dards', 'futboli', 'butifarra', 'catan')),
       ~ read_sheet(sheet_url, sheet = .x)
     )
     
@@ -219,7 +225,8 @@ shinyApp(
     classification <- reactiveValues(
       dards = get_classification(last_results$dards, game = "dards"),
       futboli = get_classification(last_results$futboli, game = "futboli"),
-      butifarra = get_classification(last_results$butifarra, game = "butifarra")
+      butifarra = get_classification(last_results$butifarra, game = "butifarra"),
+      catan = get_classification(last_results$catan, game = "catan")
     )
     
     # Information
@@ -242,7 +249,7 @@ shinyApp(
         } else {
           shinyjs::disable("submit")
         }
-      } else if (input$GAME %in% c("futboli", "butifarra")) {
+      } else {
         shinyjs::show("winner2")
         shinyjs::show("loser2")
         if (stringr::str_length(input$WINNER) > 0 & stringr::str_length(input$LOSER) > 0 &
@@ -323,6 +330,11 @@ shinyApp(
         get_classification_table(game = input$GAME)
     })   
     
+    output$table_catan <- renderTable({
+      classification$catan %>% 
+        mutate(punts = as.integer(punts)) %>% 
+        get_classification_table(game = input$GAME)
+    }) 
     
     
     # Plots -------------------------------------------------------------------
@@ -343,6 +355,13 @@ shinyApp(
     
     output$plot_butifarra <- renderHighchart({
       classification$butifarra %>% 
+        hchart(type = "column", hcaes(x = jugador, y = punts), name = "Punts") %>% 
+        hc_xAxis(title = list(text = "")) %>% 
+        hc_yAxis(title = list(text = "Punts"))
+    })
+    
+    output$plot_catan <- renderHighchart({
+      classification$catan %>% 
         hchart(type = "column", hcaes(x = jugador, y = punts), name = "Punts") %>% 
         hc_xAxis(title = list(text = "")) %>% 
         hc_yAxis(title = list(text = "Punts"))
