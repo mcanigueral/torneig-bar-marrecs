@@ -82,12 +82,12 @@ shinyApp(
       body { background: #fff5e6; }
       "
     ),
-    title = "Triatló de bar",
+    title = "Torneig de bar",
     div(id = "header",
         titlePanel(tagList(
           img(src = "http://marrecs.cat/wp-content/uploads/2016/01/icona-marrecs-300x300.png", height = 50),
           span(
-            strong("Triatló de bar"),
+            strong("Torneig de bar"),
             actionButton("bases", "",
                          icon("info", class="fa fa-info-circle", style="color:#4682B4; font-size: 30px;"),
                          style="background:transparent; border:transparent;")
